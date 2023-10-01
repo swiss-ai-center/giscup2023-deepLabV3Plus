@@ -1,0 +1,79 @@
+stages:
+  prepare:
+    cmd: python3 src/prepare.py
+    deps:
+      - ${prepare.file_path}
+      - src/prepare.py
+      - data/raw
+    params:
+      - prepare.method
+      - prepare.${prepare.method}
+    outs:
+      - ${prepare.out}
+
+  preprocess:
+    cmd: python3 src/preprocess.py
+    deps:
+      - ${preprocess.file_path}
+      - src/preprocess.py
+      - ${prepare.out}
+    params:
+      - preprocess.method
+      - preprocess.${preprocess.method}
+    outs:
+      - ${preprocess.out}
+
+  segmentation:
+    cmd: python3 src/segmentation.py
+    deps:
+    - ${segmentation.file_path}
+    - src/segmentation.py
+    - ${preprocess.out}
+    params:
+    - segmentation.method
+    - segmentation.${segmentation.method}
+    outs:
+    - ${segmentation.out}
+
+  # ------------------------------------------------------------------------
+  # Custom Processing Pipline
+  process:
+    cmd: python3 src/process.py
+    deps:
+      - src/process.py
+      - ${segmentation.out}
+    params:
+      - process.method
+      - process.${process.method}
+    outs:
+      - out/lake_polygons_pred.gpkg
+  # ------------------------------------------------------------------------
+
+  postprocess:
+    cmd: python3 src/postprocess.py
+    deps:
+      - src/postprocess.py
+      - out/lake_polygons_pred.gpkg
+    outs:
+      - out/lake_polygons_pred_clean.gpkg
+
+  evaluate:
+    cmd: python3 src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - out/lake_polygons_pred_clean.gpkg
+    params:
+      - images
+      - training_data_regions
+    plots:
+      - evaluation/plots
+    metrics:
+      - evaluation/summary.json
+
+  submission:
+    cmd: python3 src/submission.py
+    deps:
+      - src/submission.py
+      - out/lake_polygons_pred_clean.gpkg
+    outs:
+      - out/lake_polygons_test.gpkg      

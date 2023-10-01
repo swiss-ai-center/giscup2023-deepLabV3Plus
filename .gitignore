@@ -1,0 +1,20 @@
+# IDE
+.vscode/
+
+# Python
+.venv
+__pycache__
+
+# OS Specific
+.DS_Store
+
+# Data
+data/raw
+data/prepared
+data/preprocessed
+out
+img
+evaluation
+
+# DVC
+/models

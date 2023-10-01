@@ -1,0 +1,213 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python3 src/prepare.py
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: f6dff58782cf5384b94cae924c474403.dir
+      size: 9526278569
+      nfiles: 13
+    - path: src/methods/prepare/tiling_ann_simple.py
+      hash: md5
+      md5: 49ee6779f6b66eaf6e7c3d16045c30a2
+      size: 8420
+    - path: src/prepare.py
+      hash: md5
+      md5: efb86c9cd7113419d81456e7a1d6b5b2
+      size: 577
+    params:
+      params.yaml:
+        prepare.method: tiling_ann_simple
+        prepare.tiling_ann_simple:
+          tile_size: 448
+          tile_output_size: 320
+          tile_overlap: 0.5
+          extract_dem: false
+    outs:
+    - path: data/prepared
+      hash: md5
+      md5: af50b879813033c91d04505e9a957514.dir
+      size: 6270815621
+      nfiles: 3
+  process:
+    cmd: python3 src/process.py
+    deps:
+    - path: data/segmentation
+      hash: md5
+      md5: 78da3c20f486886480d5424d2b4df843.dir
+      size: 240698677
+      nfiles: 18
+    - path: src/process.py
+      hash: md5
+      md5: 3dd3035241917c85b04f18b5dd0ecd5f
+      size: 655
+    params:
+      params.yaml:
+        process.method: segmentation_model_prediction
+        process.segmentation_model_prediction:
+          skip_first_n_models: 0
+          n_models: 3
+          tile_size: 448
+          tile_output_size: 320
+          num_processes: 1
+          n_overlap: 3
+          batch_size: 32
+    outs:
+    - path: out/lake_polygons_pred.gpkg
+      hash: md5
+      md5: caaf4b264475151ea4e8e0b85138765f
+      size: 14393344
+  evaluate:
+    cmd: python3 src/evaluate.py
+    deps:
+    - path: out/lake_polygons_pred_clean.gpkg
+      hash: md5
+      md5: b2fda8acf6231ce9f4d059502b2550ff
+      size: 12824576
+    - path: src/evaluate.py
+      hash: md5
+      md5: a9ee17114f53ec6e19766ce7796c9ca7
+      size: 11560
+    params:
+      params.yaml:
+        images:
+        - Greenland26X_22W_Sentinel2_2019-06-03_05.tif
+        - Greenland26X_22W_Sentinel2_2019-06-19_20.tif
+        - Greenland26X_22W_Sentinel2_2019-07-31_25.tif
+        - Greenland26X_22W_Sentinel2_2019-08-25_29.tif
+        training_data_regions:
+          Greenland26X_22W_Sentinel2_2019-06-03_05.tif:
+          - 2
+          - 4
+          - 6
+          Greenland26X_22W_Sentinel2_2019-06-19_20.tif:
+          - 1
+          - 3
+          - 5
+          Greenland26X_22W_Sentinel2_2019-07-31_25.tif:
+          - 2
+          - 4
+          - 6
+          Greenland26X_22W_Sentinel2_2019-08-25_29.tif:
+          - 1
+          - 3
+          - 5
+    outs:
+    - path: evaluation/plots
+      hash: md5
+      md5: bb8c7cbf10d75b05aeaf9f8357c9df03.dir
+      size: 8663089
+      nfiles: 12
+    - path: evaluation/summary.json
+      hash: md5
+      md5: ff15ca9acb903ca59a45baaf5452ade5
+      size: 2636
+  preprocess:
+    cmd: python3 src/preprocess.py
+    deps:
+    - path: data/prepared
+      hash: md5
+      md5: af50b879813033c91d04505e9a957514.dir
+      size: 6270815621
+      nfiles: 3
+    - path: src/methods/preprocess/random_split_validation.py
+      hash: md5
+      md5: 077a8ed8798cf02f61e23443da1b35c6
+      size: 7018
+    - path: src/preprocess.py
+      hash: md5
+      md5: 2a7a512bdef82c8ab008430be8c664db
+      size: 761
+    params:
+      params.yaml:
+        preprocess.method: random_split_validation
+        preprocess.random_split_validation:
+          metadata_path: data/prepared/metadata.csv
+          image_sim_path: data/prepared/similarity_map.csv
+          lake_image_ratio: 1
+          val_ratio: 0.2
+          tiles_dir: data/prepared/tiles.tar
+          annotations_dir: data/prepared/ann_tiles.tar
+          dems_dir: data/prepared/dem_tiles.tar
+          seed: 412
+    outs:
+    - path: data/preprocessed/dataset
+      hash: md5
+      md5: d7df57705b7be6be4809a6d0f1c080ce.dir
+      size: 1645983550
+      nfiles: 26486
+  segmentation:
+    cmd: python3 src/segmentation.py
+    deps:
+    - path: data/preprocessed/dataset
+      hash: md5
+      md5: d7df57705b7be6be4809a6d0f1c080ce.dir
+      size: 1645983550
+      nfiles: 26486
+    - path: src/methods/segmentation/deep_lab_v3_plus.py
+      hash: md5
+      md5: 1ac7fa822467ef74999b316f00567da1
+      size: 15870
+    - path: src/segmentation.py
+      hash: md5
+      md5: 80a8835426639934ff9a8acc24495699
+      size: 743
+    params:
+      params.yaml:
+        segmentation.deep_lab_v3_plus:
+          input_shape:
+          - 320
+          - 320
+          - 3
+          target_shape:
+          - 320
+          - 320
+          - 1
+          loss_function: weighted_bce_and_dice
+          batch_size: 32
+          learning_rate: 0.1
+          n_epochs_per_cycle: 50
+          n_cycles: 3
+          do_learning_rate_analysis: false
+          freeze_backbone_model: false
+          with_all_data: true
+        segmentation.method: deep_lab_v3_plus
+    outs:
+    - path: data/segmentation
+      hash: md5
+      md5: 78da3c20f486886480d5424d2b4df843.dir
+      size: 240698677
+      nfiles: 18
+  postprocess:
+    cmd: python3 src/postprocess.py
+    deps:
+    - path: out/lake_polygons_pred.gpkg
+      hash: md5
+      md5: caaf4b264475151ea4e8e0b85138765f
+      size: 14393344
+    - path: src/postprocess.py
+      hash: md5
+      md5: 7dbf4e5e02ce7357be940a5a7a9a6543
+      size: 716
+    outs:
+    - path: out/lake_polygons_pred_clean.gpkg
+      hash: md5
+      md5: b2fda8acf6231ce9f4d059502b2550ff
+      size: 12824576
+  submission:
+    cmd: python3 src/submission.py
+    deps:
+    - path: out/lake_polygons_pred_clean.gpkg
+      hash: md5
+      md5: b2fda8acf6231ce9f4d059502b2550ff
+      size: 12824576
+    - path: src/submission.py
+      hash: md5
+      md5: 6cc11812f6d63691d6f4ecdb6e060695
+      size: 3717
+    outs:
+    - path: out/lake_polygons_test.gpkg
+      hash: md5
+      md5: b971adead5b3e5367dd9e74a3f1f5518
+      size: 6643712

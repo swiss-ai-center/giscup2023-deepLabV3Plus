@@ -1,0 +1,111 @@
+# ------------------------------------------------------------------------
+# Global Parameters
+# ------------------------------------------------------------------------
+crs: EPSG:3857 # Coordinate Reference System
+
+images:
+  - Greenland26X_22W_Sentinel2_2019-06-03_05.tif
+  - Greenland26X_22W_Sentinel2_2019-06-19_20.tif
+  - Greenland26X_22W_Sentinel2_2019-07-31_25.tif
+  - Greenland26X_22W_Sentinel2_2019-08-25_29.tif
+
+training_data_regions:
+  Greenland26X_22W_Sentinel2_2019-06-03_05.tif: [2, 4, 6]
+  Greenland26X_22W_Sentinel2_2019-06-19_20.tif: [1, 3, 5]
+  Greenland26X_22W_Sentinel2_2019-07-31_25.tif: [2, 4, 6]
+  Greenland26X_22W_Sentinel2_2019-08-25_29.tif: [1, 3, 5]
+
+test_data_regions: # Data not included in training data provided
+  Greenland26X_22W_Sentinel2_2019-06-03_05.tif: [1, 3, 5]
+  Greenland26X_22W_Sentinel2_2019-06-19_20.tif: [2, 4, 6]
+  Greenland26X_22W_Sentinel2_2019-07-31_25.tif: [1, 3, 5]
+  Greenland26X_22W_Sentinel2_2019-08-25_29.tif: [2, 4, 6]
+
+# ------------------------------------------------------------------------
+# DVC Pipeline Parameters
+# ------------------------------------------------------------------------
+prepare:
+  # Modify depending on the method used
+  method: tiling_ann_simple
+  file_path: src/methods/prepare/tiling_ann_simple.py
+  out: data/prepared
+
+  default:
+
+  tiling_simple:
+    tile_size: 1024 # Size of each extracted tile
+
+  tiling_ann_simple:
+    tile_size: 448 # Size of each extracted tile
+    tile_output_size: 320
+    tile_overlap: 0.5 # Overlap between tiles
+    extract_dem: False # Whether to include DEM data
+
+  tiling_around_lakes:
+    tile_size: 320 # Size of each extracted tile
+    n_shifted_tile: 1
+
+preprocess:
+  # Modify depending on the method used
+  method: random_split_validation
+  file_path: src/methods/preprocess/random_split_validation.py
+  out: data/preprocessed/dataset
+
+  default:
+
+  regions_cross_validation:
+
+  generate_dataset:
+    metadata_path: data/prepared/metadata.csv
+    image_sim_path: data/prepared/similarity_map.csv
+    lake_image_ratio: 0.7 # Ratio of lake pixels to non-lake pixels in the dataset
+    seed: 412 # Random seed for reproducibility
+    img_path: data/prepared/tiles
+    ann_path: data/prepared/ann_tiles
+    dem_path: data/prepared/dem_tiles
+
+  random_split_validation:
+    metadata_path: data/prepared/metadata.csv
+    image_sim_path: data/prepared/similarity_map.csv
+    lake_image_ratio: 1
+    val_ratio: 0.2
+    tiles_dir: data/prepared/tiles.tar
+    annotations_dir: data/prepared/ann_tiles.tar
+    dems_dir: data/prepared/dem_tiles.tar
+    seed: 412
+
+segmentation:
+  # Modify depending on the method used
+  method: deep_lab_v3_plus
+  file_path: src/methods/segmentation/deep_lab_v3_plus.py
+  out: data/segmentation
+
+  default:
+
+  deep_lab_v3_plus:
+    input_shape: [320, 320, 3]
+    target_shape: [320, 320, 1]
+    loss_function: 'weighted_bce_and_dice'
+    batch_size: 32
+    learning_rate: 0.1
+    n_epochs_per_cycle: 50
+    n_cycles: 3
+    do_learning_rate_analysis: False
+    freeze_backbone_model: False
+    with_all_data: True
+
+# Custom processing params
+process:
+  method: segmentation_model_prediction
+  file_path: src/methods/process/segmentation_model_prediction.py
+
+  default:
+
+  segmentation_model_prediction:
+    skip_first_n_models: 0
+    n_models: 3 # Number of model saved, same as n_cycles (number of used models for prediction is equal to n_models - skip_first_n_models)
+    tile_size: 448
+    tile_output_size: 320
+    num_processes: 1
+    n_overlap: 3
+    batch_size: 32
