@@ -146,6 +146,10 @@ Compared to the aforementioned implementation:
 
 Chosen optimizer is SGD with momentum=0.99, clipnorm=1. Snapshot ensembles method (https://arxiv.org/abs/1704.00109) is used to have an ensemble of three models.
 
+### Pre-trained models
+
+The trained models are available on [huggingface.co/swiss-ai-center](https://huggingface.co/swiss-ai-center/giscup2023-deepLabV3Plus).
+
 ## Inference
 
 Tiles are extracted with overlap and predictions are averaged across overlaps and the models ensemble predictions.
