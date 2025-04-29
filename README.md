@@ -53,32 +53,36 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Or with conda
-
-```sh
-conda create -n giscup2023 python=3.10.12 pip
-conda activate giscup2023
-```
-
-Then install requirements
+Then install requirements:
 ```sh
 # Install dependencies
-pip install -r requirements.txt
+pip install -r requirements_freeze.txt
 ```
 
-`requirements.txt` contains only the top-level dependencies.
-You can check transitives dependencies versions in `requirements_freeze.txt` file. 
+`requirements.txt` contains only the top-level dependencies, while `requirements_freeze.txt` contains all versioned transitives dependencies.
 
 Note that code has been tested with python 3.10.12 and CUDA 11.3.
 Tensorflow is included in `requirements.txt` but depending on your configuration and CUDA version, you may need to follow this: [Install TensorFlow with pip](https://www.tensorflow.org/install/pip?hl=en)
 
+### Data
+
+Retrieve the [original GISCUP 2023 data files](https://sigspatial2023.sigspatial.org/giscup/download.html) and place them in the `data/raw` folder.
+
+You can then reproduce the experiment with:
+
+```sh
+dvc repro
+```
+
 ### Download Data from DVC
 
-You can pull the data from the remote storage with the following command:
+If the data is available from the remote storage, you can pull it with the following command:
 
 ```sh
 dvc pull
 ```
+
+To configure DVC for remote storage, refer to the [DVC documentation](https://dvc.org/doc).
 
 ## Development Environment
 
